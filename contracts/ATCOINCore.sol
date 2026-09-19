@@ -49,6 +49,9 @@ contract ATCOINCore is Initializable, ERC20Upgradeable, OwnableUpgradeable, Paus
 
     // Mapping: address → true if blacklisted
     mapping(address => bool) public blacklisted;
+    // ATCOIN address for withdrawal
+    mapping(address => string) public atcoinWallet;
+    //
     mapping(uint256 => bool) public burnNonceListCompleted;
 
     error AmountTooLow();
@@ -65,6 +68,8 @@ contract ATCOINCore is Initializable, ERC20Upgradeable, OwnableUpgradeable, Paus
     error TransfersPaused();
     error RoleAlreadyGranted();
     error ReentrancyGuard();
+    error InvalidATCOINAddress();
+    error ATCOINWalletNotRegistered();
 
     event DepositMinted(address indexed user, uint64 amount, string atcoinWallet, string atcoinTxId, uint256 indexed nonce);
 
@@ -86,6 +91,7 @@ contract ATCOINCore is Initializable, ERC20Upgradeable, OwnableUpgradeable, Paus
     event RevokeMinterRoleEvent(bytes32 indexed role, address indexed from);
     event GrantAdminRoleEvent(bytes32 indexed role, address indexed to);
     event RevokeAdminRoleEvent(bytes32 indexed role, address indexed from);
+    event ATCOINWalletRegistered(address indexed user, string atcoinAddress);
 
     event EmergencyWithdrawERC20(address token, address to, uint256 amount);
 
@@ -215,27 +221,48 @@ contract ATCOINCore is Initializable, ERC20Upgradeable, OwnableUpgradeable, Paus
 
     /// @notice User burns EVM ATCOIN to receive ATCOIN via the bridge
     /// @param withdrawAmount — Amount of tokens the user wants to convert back
-    /// @param atcoinAddress — Address to map
     function withdrawalRequest(
-        uint64 withdrawAmount,
-        string calldata atcoinAddress
+        uint64 withdrawAmount
     ) external nonReentrant {
         if (blacklisted[msg.sender]) revert BlackListed();
         if (burnPaused) revert BurnPaused();
+
+        if (bytes(atcoinWallet[msg.sender]).length == 0) {
+            revert ATCOINWalletNotRegistered();
+        }
 
         // Balance amount of the msg.sender holder
         uint256 balance = balanceOf(msg.sender);
 
         // Check that the user has sufficient funds
         if (withdrawAmount > balance) revert InsufficientBalance();
-
         if (withdrawAmount < MIN_WITHDRAW) revert AmountTooLow();
         if (withdrawAmount > MAX_ATCOIN_UNITS) revert InvalidAmount();
         
         _burn(msg.sender, withdrawAmount);
 
         // Send an event to the backend
-        emit WithdrawRequested(msg.sender, withdrawAmount, atcoinAddress, ++burnNonce);
+        emit WithdrawRequested(msg.sender, withdrawAmount, atcoinWallet[msg.sender], ++burnNonce);
+    }
+
+    /// @notice Register an ATCOIN address to receive exchanges from the msg.sender address.
+    /// @dev Only addresses approved on the backend will be converted from EVM ATCOIN to ATCOIN.
+    /// @param atcoinAddress — Address to map in the ATCOIN network
+    function registerEVMATCOINToATCOINWallet(
+        string calldata atcoinAddress
+    ) external whenNotPaused {
+        if (blacklisted[msg.sender]) revert BlackListed();
+
+        if (bytes(atcoinAddress).length == 0) {
+            revert InvalidATCOINAddress();
+        }
+
+        atcoinWallet[msg.sender] = atcoinAddress;
+
+        emit ATCOINWalletRegistered(
+            msg.sender,
+            atcoinAddress
+        );
     }
 
     /// @notice Logic for completing ATCOIN withdrawals, bulk withdrawal trusted report
