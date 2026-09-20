@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.36;
+pragma solidity ^0.8.37;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -190,19 +190,19 @@ contract ATCOINCore is Initializable, ERC20Upgradeable, OwnableUpgradeable, Paus
     /// @notice Logic for minting new EVM ATCOIN for multiple users
     /// @param users - Users to mint EVM ATCOIN for
     /// @param amounts - Amount of tokens withdrawn
-    /// @param atcoinWallet - Wallet in ATCOIN network
+    /// @param atcoinMintWallet - Wallet in ATCOIN network
     /// @param atcoinTxIds - Transaction hashes on the ATCOIN network
     function batchMintDepositEVMATCOINHandler(
         address[] calldata users,
         uint64[] calldata amounts,
-        string[] calldata atcoinWallet,
+        string[] calldata atcoinMintWallet,
         string[] calldata atcoinTxIds
     ) external onlyRole(MINTER_ROLE) {
         if (mintPaused) revert MintPaused();
         uint256 uLen = users.length;
         uint256 totalAmounts = 0;
  
-        if (uLen == 0 || uLen != amounts.length || uLen != atcoinWallet.length || uLen != atcoinTxIds.length) revert LenMismatch();
+        if (uLen == 0 || uLen != amounts.length || uLen != atcoinMintWallet.length || uLen != atcoinTxIds.length) revert LenMismatch();
         if (uLen > MAX_BATCH) revert BatchTooLarge();
 
 
@@ -215,7 +215,7 @@ contract ATCOINCore is Initializable, ERC20Upgradeable, OwnableUpgradeable, Paus
             _mint(users[i], amounts[i]);
 
             // Send an event to the backend
-            emit DepositMinted(users[i], amounts[i], atcoinWallet[i], atcoinTxIds[i], ++mintDepositNonce);
+            emit DepositMinted(users[i], amounts[i], atcoinMintWallet[i], atcoinTxIds[i], ++mintDepositNonce);
         }
     }
 
