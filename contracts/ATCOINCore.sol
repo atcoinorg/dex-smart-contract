@@ -48,9 +48,9 @@ contract ATCOINCore is Initializable, ERC20Upgradeable, OwnableUpgradeable, Paus
     bool public burnPaused;
 
     // Mapping: address → true if blacklisted
-    mapping(address => bool) public blacklisted;
+    mapping(address => bool) private blacklisted;
     // ATCOIN address for withdrawal
-    mapping(address => string) public atcoinWallet;
+    mapping(address => string) private atcoinWallet;
     //
     mapping(uint256 => bool) public burnNonceListCompleted;
 
@@ -217,6 +217,12 @@ contract ATCOINCore is Initializable, ERC20Upgradeable, OwnableUpgradeable, Paus
             // Send an event to the backend
             emit DepositMinted(users[i], amounts[i], atcoinWallet[i], atcoinTxIds[i], ++mintDepositNonce);
         }
+    }
+
+    /// @notice Returns the registered ATCOIN wallet for an EVM user
+    /// @param user EVM user address
+    function getATCOINWallet(address user) external view returns (string memory) {
+        return atcoinWallet[user];
     }
 
     /// @notice User burns EVM ATCOIN to receive ATCOIN via the bridge
