@@ -92,6 +92,7 @@ contract ATCOINCore is Initializable, ERC20Upgradeable, OwnableUpgradeable, Paus
     event GrantAdminRoleEvent(bytes32 indexed role, address indexed to);
     event RevokeAdminRoleEvent(bytes32 indexed role, address indexed from);
     event ATCOINWalletRegistered(address indexed user, string atcoinAddress);
+    event ATCOINWalletRemoved(address indexed user);
 
     event EmergencyWithdrawERC20(address token, address to, uint256 amount);
 
@@ -207,6 +208,10 @@ contract ATCOINCore is Initializable, ERC20Upgradeable, OwnableUpgradeable, Paus
 
 
         for (uint256 i; i < uLen; ++i) {
+            if (!isValidATCOINAddress(atcoinMintWallet[i])) {
+                revert InvalidATCOINAddress();
+            }
+
             totalAmounts = totalAmounts + amounts[i];
         }
         if (totalSupply() + totalAmounts > MAX_ATCOIN_UNITS) revert ExceedsMaxSupply();
@@ -251,6 +256,17 @@ contract ATCOINCore is Initializable, ERC20Upgradeable, OwnableUpgradeable, Paus
         emit WithdrawRequested(msg.sender, withdrawAmount, atcoinWallet[msg.sender], ++burnNonce);
     }
 
+    /// @notice Remove an ATCOIN address
+    function removeATCOINWallet() external {
+        if (bytes(atcoinWallet[msg.sender]).length == 0) {
+            revert ATCOINWalletNotRegistered();
+        }
+
+        delete atcoinWallet[msg.sender];
+
+        emit ATCOINWalletRemoved(msg.sender);
+    }
+
     /// @notice Register an ATCOIN address to receive exchanges from the msg.sender address.
     /// @dev Only addresses approved on the backend will be converted from EVM ATCOIN to ATCOIN.
     /// @param atcoinAddress — Address to map in the ATCOIN network
@@ -259,7 +275,7 @@ contract ATCOINCore is Initializable, ERC20Upgradeable, OwnableUpgradeable, Paus
     ) external whenNotPaused {
         if (blacklisted[msg.sender]) revert BlackListed();
 
-        if (bytes(atcoinAddress).length == 0) {
+        if (!isValidATCOINAddress(atcoinAddress)) {
             revert InvalidATCOINAddress();
         }
 
@@ -432,5 +448,54 @@ contract ATCOINCore is Initializable, ERC20Upgradeable, OwnableUpgradeable, Paus
         IERC20(token).safeTransfer(to, amount);
 
         emit EmergencyWithdrawERC20(token, to, amount);
+    }
+
+    /// @notice Checks whether an ATCOIN address has a valid format
+    /// @dev Valid formats:
+    /// atcoin1 + 59 lowercase alphanumeric characters
+    /// t4atcoin1 + 59 lowercase alphanumeric characters
+    function isValidATCOINAddress(
+        string memory atcoinAddress
+    ) public pure returns (bool) {
+        bytes memory addr = bytes(atcoinAddress);
+
+        bytes memory mainPrefix = bytes("atcoin1");
+        bytes memory testPrefix = bytes("t4atcoin1");
+
+        uint256 prefixLength;
+
+        if (addr.length == mainPrefix.length + 59) {
+            prefixLength = mainPrefix.length;
+
+            for (uint256 i; i < prefixLength; ++i) {
+                if (addr[i] != mainPrefix[i]) {
+                    return false;
+                }
+            }
+        } else if (addr.length == testPrefix.length + 59) {
+            prefixLength = testPrefix.length;
+
+            for (uint256 i; i < prefixLength; ++i) {
+                if (addr[i] != testPrefix[i]) {
+                    return false;
+                }
+            }
+        } else {
+            return false;
+        }
+
+        // Remaining 59 characters must be exactly [a-z0-9]
+        for (uint256 i = prefixLength; i < addr.length; ++i) {
+            bytes1 char = addr[i];
+
+            bool isLowercase = char >= 0x61 && char <= 0x7A; // a-z
+            bool isDigit = char >= 0x30 && char <= 0x39;     // 0-9
+
+            if (!isLowercase && !isDigit) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
