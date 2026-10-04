@@ -100,7 +100,7 @@ contract ATCOINCore is Initializable, ERC20Upgradeable, OwnableUpgradeable, Paus
     constructor() {
         _disableInitializers();
     }
-    
+
     /// @dev Disallow upgrade without code verification
     /// @param newImplementation Address of the new contract
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
@@ -202,7 +202,7 @@ contract ATCOINCore is Initializable, ERC20Upgradeable, OwnableUpgradeable, Paus
         if (mintPaused) revert MintPaused();
         uint256 uLen = users.length;
         uint256 totalAmounts = 0;
- 
+
         if (uLen == 0 || uLen != amounts.length || uLen != atcoinMintWallet.length || uLen != atcoinTxIds.length) revert LenMismatch();
         if (uLen > MAX_BATCH) revert BatchTooLarge();
 
@@ -249,7 +249,7 @@ contract ATCOINCore is Initializable, ERC20Upgradeable, OwnableUpgradeable, Paus
         if (withdrawAmount > balance) revert InsufficientBalance();
         if (withdrawAmount < MIN_WITHDRAW) revert AmountTooLow();
         if (withdrawAmount > MAX_ATCOIN_UNITS) revert InvalidAmount();
-        
+
         _burn(msg.sender, withdrawAmount);
 
         // Send an event to the backend
@@ -299,14 +299,14 @@ contract ATCOINCore is Initializable, ERC20Upgradeable, OwnableUpgradeable, Paus
         uint256[] calldata burnNoncesCompleted
     ) external onlyRole(ADMIN_ROLE) {
         uint256 uLen = evmUsers.length;
- 
+
         if (uLen > MAX_BATCH) revert BatchTooLarge();
         if (uLen == 0 || uLen != amounts.length || uLen != atcoinTxIds.length || uLen != burnNoncesCompleted.length) revert LenMismatch();
 
         for (uint256 i; i < uLen; ++i) {
             if (burnNoncesCompleted[i] != 0 && burnNonce >= burnNoncesCompleted[i] && !burnNonceListCompleted[burnNoncesCompleted[i]]) {
                 burnNonceListCompleted[burnNoncesCompleted[i]] = true;
-                // Send an event as a completion report 
+                // Send an event as a completion report
                 emit WithdrawCompleted(evmUsers[i], amounts[i], atcoinTxIds[i], burnNoncesCompleted[i]);
             }
         }
@@ -459,20 +459,11 @@ contract ATCOINCore is Initializable, ERC20Upgradeable, OwnableUpgradeable, Paus
     ) public pure returns (bool) {
         bytes memory addr = bytes(atcoinAddress);
 
-        bytes memory mainPrefix = bytes("atcoin1");
         bytes memory testPrefix = bytes("t4atcoin1");
 
         uint256 prefixLength;
 
-        if (addr.length == mainPrefix.length + 59) {
-            prefixLength = mainPrefix.length;
-
-            for (uint256 i; i < prefixLength; ++i) {
-                if (addr[i] != mainPrefix[i]) {
-                    return false;
-                }
-            }
-        } else if (addr.length == testPrefix.length + 59) {
+        if (addr.length == testPrefix.length + 59) {
             prefixLength = testPrefix.length;
 
             for (uint256 i; i < prefixLength; ++i) {
