@@ -8,6 +8,11 @@ const CORE_BY_NETWORK = {
     bsc: "contracts/main/ATCOINCore.sol:ATCOINCore",
 };
 
+const ENV_BY_NETWORK = {
+    bsc: ["BSC_MAINNET_RPC_URL", "MAINNET_PRIVATE_KEY"],
+    bscTestnet: ["BSC_TESTNET4_RPC_URL", "TESTNET4_PRIVATE_KEY"],
+};
+
 const PROXY_CONTRACT =
     "contracts/ATCOINProxy.sol:ATCOINProxy";
 
@@ -23,10 +28,25 @@ async function main() {
         );
     }
 
+    const missingVariables = ENV_BY_NETWORK[networkName].filter(
+        (name) => !process.env[name]?.trim()
+    );
+
+    if (missingVariables.length > 0) {
+        throw new Error(
+            `Missing environment variables for ${networkName}: ` +
+            missingVariables.join(", ")
+        );
+    }
+
     console.log("ATCOINCore source:", CORE_CONTRACT);
     console.log("Proxy source:", PROXY_CONTRACT);
 
     const [deployer] = await ethers.getSigners();
+
+    if (!deployer) {
+        throw new Error(`No deployment account configured for ${networkName}`);
+    }
 
     console.log("\nDeployer:", deployer.address);
 

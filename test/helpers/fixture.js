@@ -1,11 +1,14 @@
-const { ethers } = require('hardhat');
-const { expect } = require('chai');
-const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
+import { network } from 'hardhat';
+import { expect } from 'chai';
+
+const { ethers, networkHelpers } = await network.create();
+const loadFixture = networkHelpers.loadFixture.bind(networkHelpers);
+const CORE_CONTRACT = 'contracts/testnet4/ATCOINCore.sol:ATCOINCore';
 async function deploy() {
   const [owner, alice, bob, mallory, admin, minter, pauser, stranger] = await ethers.getSigners();
-  const implementation = await ethers.deployContract('ATCOINCore');
+  const implementation = await ethers.deployContract(CORE_CONTRACT);
   const proxy = await ethers.deployContract('ATCOINProxy', [implementation.target, owner.address]);
-  const core = await ethers.getContractAt('ATCOINCore', proxy.target);
+  const core = await ethers.getContractAt(CORE_CONTRACT, proxy.target);
   const roles = { Admin: await core.ADMIN_ROLE(), Minter: await core.MINTER_ROLE(), Pauser: await core.PAUSER_ROLE() };
   return { core, proxy, implementation, owner, alice, bob, mallory, admin, minter, pauser, stranger, roles, cap: await core.MAX_ATCOIN_UNITS(), min: await core.MIN_WITHDRAW(), max: Number(await core.MAX_BATCH()) };
 }
@@ -24,4 +27,4 @@ async function snapshot(core, users) {
 async function unauthorized(promise, core, user, role) {
   await expect(promise).to.be.revertedWithCustomError(core, 'AccessControlUnauthorizedAccount').withArgs(user.address, role);
 }
-module.exports = { ethers, expect, loadFixture, deploy, mint, complete, events, snapshot, unauthorized };
+export { ethers, expect, loadFixture, deploy, mint, complete, events, snapshot, unauthorized };

@@ -2,6 +2,7 @@ node_modules
 .deps
 .idea
 .env
+.github
 
 # Hardhat files
 /cache

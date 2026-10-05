@@ -4,10 +4,11 @@ import {defineConfig} from "hardhat/config";
 import hardhatToolboxMochaEthers
     from "@nomicfoundation/hardhat-toolbox-mocha-ethers";
 
-const PRIVATE_KEY = process.env.PRIVATE_KEY;
+const MAINNET_PRIVATE_KEY = process.env.MAINNET_PRIVATE_KEY;
+const TESTNET4_PRIVATE_KEY = process.env.TESTNET4_PRIVATE_KEY;
 
-const BSC_TESTNET_RPC_URL =
-    process.env.BSC_TESTNET_RPC_URL ||
+const BSC_TESTNET4_RPC_URL =
+    process.env.BSC_TESTNET4_RPC_URL ||
     "https://bsc-testnet-dataseed.bnbchain.org";
 
 const BSC_MAINNET_RPC_URL =
@@ -36,10 +37,10 @@ export default defineConfig({
     networks: {
         bscTestnet: {
             type: "http",
-            url: BSC_TESTNET_RPC_URL,
+            url: BSC_TESTNET4_RPC_URL,
             chainId: 97,
-            accounts: PRIVATE_KEY
-                ? [PRIVATE_KEY]
+            accounts: TESTNET4_PRIVATE_KEY
+                ? [TESTNET4_PRIVATE_KEY]
                 : []
         },
 
@@ -47,13 +48,16 @@ export default defineConfig({
             type: "http",
             url: BSC_MAINNET_RPC_URL,
             chainId: 56,
-            accounts: PRIVATE_KEY
-                ? [PRIVATE_KEY]
+            accounts: MAINNET_PRIVATE_KEY
+                ? [MAINNET_PRIVATE_KEY]
                 : []
         }
     },
 
     verify: {
+        blockscout: {
+            enabled: false
+        },
         etherscan: {
             apiKey: BSCSCAN_API_KEY
         }
