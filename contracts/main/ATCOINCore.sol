@@ -17,7 +17,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
  * @dev https://github.com/atcoinorg/atcoin
  * @notice Wrapper Token for Custodial Bridge EVM ATCOIN.
  *         The 1:1 economic model is secured by off-chain ATCOIN reserves
- *         VERSION = 1.0.0
+ *         VERSION = 1.0.1
  * @dev ERC20 token simulating ATCOIN
  */
 contract ATCOINCore is Initializable, ERC20Upgradeable, OwnableUpgradeable, PausableUpgradeable, UUPSUpgradeable, AccessControlUpgradeable {
@@ -59,6 +59,7 @@ contract ATCOINCore is Initializable, ERC20Upgradeable, OwnableUpgradeable, Paus
     error ExceedsMaxSupply();
     error InsufficientBalance();
     error InvalidUserAddress();
+    error BlacklistMessageRequired();
     error InvalidTxId();
     error InvalidAmount();
     error LenMismatch();
@@ -83,7 +84,7 @@ contract ATCOINCore is Initializable, ERC20Upgradeable, OwnableUpgradeable, Paus
     event PausedByBurnEvent(address indexed by);
     event UnpausedByBurnEvent(address indexed by);
 
-    event BlacklistUpdatedEvent(address indexed user, bool value);
+    event BlacklistUpdatedEvent(address indexed user, bool value, string message);
 
     event GrantPauserRoleEvent(bytes32 indexed role, address indexed to);
     event RevokePauserRoleEvent(bytes32 indexed role, address indexed from);
@@ -113,7 +114,7 @@ contract ATCOINCore is Initializable, ERC20Upgradeable, OwnableUpgradeable, Paus
     /// @notice Contract initialization for Proxy
     /// @param initialOwner Contract owner
     function initialize(address initialOwner) public initializer {
-        __ERC20_init("EVM ATCOIN", "ATCOIN");
+        __ERC20_init(name(), symbol());
         __Ownable_init(initialOwner); // Owner assignment
         __Pausable_init();
         __AccessControl_init();
@@ -175,11 +176,13 @@ contract ATCOINCore is Initializable, ERC20Upgradeable, OwnableUpgradeable, Paus
     /// @notice Add or remove a user from the blacklist
     /// @param user User address
     /// @param value true — block, false — unblock
+    /// @param message reason when blocking
     /// @dev Admins only
-    function setBlacklist(address user, bool value) external onlyRole(ADMIN_ROLE) {
+    function setBlacklist(address user, bool value, string calldata message) external onlyRole(ADMIN_ROLE) {
         if (user == address(0)) revert InvalidUserAddress();
+        if (value && bytes(message).length == 0) revert BlacklistMessageRequired();
         blacklisted[user] = value;
-        emit BlacklistUpdatedEvent(user, value);
+        emit BlacklistUpdatedEvent(user, value, message);
     }
 
     /// @notice Checks if the user is blocked
@@ -345,6 +348,16 @@ contract ATCOINCore is Initializable, ERC20Upgradeable, OwnableUpgradeable, Paus
         }
 
         super._spendAllowance(owner_, spender, value);
+    }
+
+    /// @dev Return the current metadata even for proxies initialized by an older implementation.
+    function name() public pure override returns (string memory) {
+        return "W_ATCOIN";
+    }
+
+    /// @dev Return the current metadata even for proxies initialized by an older implementation.
+    function symbol() public pure override returns (string memory) {
+        return "ATL";
     }
 
     /// @notice Override OpenZeppelin ERC20 to simulate ATCOIN-like 8-decimal precision
